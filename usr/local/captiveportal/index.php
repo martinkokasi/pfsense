@@ -2,21 +2,16 @@
 /*
 	$Id$
 	part of m0n0wall (http://m0n0.ch/wall)
-
-	Copyrigth (C) 2009	    Ermal Luçi
+	Copyrigth (C) 2009	    Ermal LuÃ§i
 	Copyright (C) 2003-2006 Manuel Kasper <mk@neon1.net>.
 	All rights reserved.
-
 	Redistribution and use in source and binary forms, with or without
 	modification, are permitted provided that the following conditions are met:
-
 	1. Redistributions of source code must retain the above copyright notice,
 	   this list of conditions and the following disclaimer.
-
 	2. Redistributions in binary form must reproduce the above copyright
 	   notice, this list of conditions and the following disclaimer in the
 	   documentation and/or other materials provided with the distribution.
-
 	THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
 	INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
 	AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
@@ -31,21 +26,16 @@
 /*
 	pfSense_MODULE:	captiveportal
 */
-
 require_once("auth.inc");
 require_once("functions.inc");
 require_once("captiveportal.inc");
-
 $errormsg = "Invalid credentials specified.";
-
 header("Expires: 0");
 header("Cache-Control: no-store, no-cache, must-revalidate");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 header("Connection: close");
-
 global $cpzone;
-
 $cpzone = $_REQUEST['zone'];
 $cpcfg = $config['captiveportal'][$cpzone];
 if (empty($cpcfg)) {
@@ -54,12 +44,10 @@ if (empty($cpcfg)) {
 	ob_flush();
 	return;
 }
-
 $orig_host = $_ENV['HTTP_HOST'];
 /* NOTE: IE 8/9 is buggy and that is why this is needed */
 $orig_request = trim($_REQUEST['redirurl'], " /");
 $clientip = $_SERVER['REMOTE_ADDR'];
-
 if (!$clientip) {
 	/* not good - bail out */
 	log_error("Captive portal could not determine client's IP address.");
@@ -68,31 +56,25 @@ if (!$clientip) {
 	ob_flush();
 	return;
 }
-
 /* storing the original redirurl in the cookie */
 setcookie('redirurl', $orig_request);
-
 $ourhostname = portal_hostname_from_client_ip($clientip);
 if ($orig_host != $ourhostname) {
 	/* the client thinks it's connected to the desired web server, but instead
 	   it's connected to us. Issue a redirect... */
 	$protocol = (isset($cpcfg['httpslogin'])) ? 'https://' : 'http://';
 	header("Location: {$protocol}{$ourhostname}/index.php?zone={$cpzone}&redirurl=" . urlencode("http://{$orig_host}/{$orig_request}"));
-
 	ob_flush();
 	return;
 }
-
 if (!empty($cpcfg['redirurl']))
 	$redirurl = $cpcfg['redirurl'];
 else if (preg_match("/redirurl=(.*)/", $orig_request, $matches))
 	$redirurl = urldecode($matches[1]);
 else if ($_REQUEST['redirurl'])
 	$redirurl = $_REQUEST['redirurl'];
-
 $macfilter = !isset($cpcfg['nomacfilter']);
 $passthrumac = isset($cpcfg['passthrumacadd']);
-
 /* find MAC address for client */
 if ($macfilter || $passthrumac) {
 	$tmpres = pfSense_ip_to_mac($clientip);
@@ -107,19 +89,16 @@ if ($macfilter || $passthrumac) {
 	$clientmac = $tmpres['macaddr'];
 	unset($tmpres);
 }
-
 /* find out if we need RADIUS + RADIUSMAC or not */
 if (file_exists("{$g['vardb_path']}/captiveportal_radius_{$cpzone}.db")) {
 	$radius_enable = TRUE;
 	if (isset($cpcfg['radmac_enable']))
 		$radmac_enable = TRUE;
 }
-
 /* find radius context */
 $radiusctx = 'first';
 if ($_POST['auth_user2'])
 	$radiusctx = 'second';
-
 if ($_POST['logout_id']) {
 	echo <<<EOD
 <HTML>
@@ -135,18 +114,14 @@ setTimeout('window.close();',5000) ;
 </SCRIPT>
 </BODY>
 </HTML>
-
 EOD;
 	captiveportal_disconnect_client($_POST['logout_id']);
-
 } else if ($clientmac && $radmac_enable && portal_mac_radius($clientmac,$clientip, $radiusctx)) {
 	/* radius functions handle everything so we exit here since we're done */
-
 } else if (portal_consume_passthrough_credit($clientmac)) {
 	/* allow the client through if it had a pass-through credit for its MAC */
 	captiveportal_logportalauth("unauthenticated",$clientmac,$clientip,"ACCEPT");
 	portal_allow($clientip, $clientmac, "unauthenticated");
-
 } else if (isset($config['voucher'][$cpzone]['enable']) && $_POST['accept'] && $_POST['auth_voucher']) {
 	$voucher = trim($_POST['auth_voucher']);
 	$timecredit = voucher_auth($voucher);
@@ -171,7 +146,6 @@ EOD;
 		captiveportal_logportalauth($voucher,$clientmac,$clientip,"FAILURE");
 		portal_reply_page($redirurl, "error", $config['voucher'][$cpzone]['msgnoaccess'] ? $config['voucher'][$cpzone]['msgnoaccess'] : $errormsg);
 	}
-
 } else if ($_POST['accept'] && $radius_enable) {
 	if (($_POST['auth_user'] && isset($_POST['auth_pass'])) || ($_POST['auth_user2'] && isset($_POST['auth_pass2']))) {
 		if (!empty($_POST['auth_user'])) {
@@ -187,7 +161,6 @@ EOD;
 			$redirurl = $auth_list['url_redirection'];
 			$type = "redir";
 		}
-
 		if ($auth_list['auth_val'] == 1) {
 			captiveportal_logportalauth($user,$clientmac,$clientip,"ERROR",$auth_list['error']);
 			portal_reply_page($redirurl, $type, $auth_list['error'] ? $auth_list['error'] : $errormsg);
@@ -205,15 +178,12 @@ EOD;
 		captiveportal_logportalauth($user ,$clientmac,$clientip,"ERROR");
 		portal_reply_page($redirurl, "error", $errormsg);
 	}
-
 } else if ($_POST['accept'] && $cpcfg['auth_method'] == "local") {
 	if ($_POST['auth_user'] && $_POST['auth_pass']) {
 		//check against local user manager
 		$loginok = local_backed($_POST['auth_user'], $_POST['auth_pass']);
-
 		if ($loginok && isset($cpcfg['localauth_priv']))
 			$loginok = userHasPrivilege(getUserEntry($_POST['auth_user']), "user-services-captiveportal-login");
-
 		if ($loginok){
 			captiveportal_logportalauth($_POST['auth_user'],$clientmac,$clientip,"LOGIN");
 			portal_allow($clientip, $clientmac,$_POST['auth_user']);
@@ -223,14 +193,19 @@ EOD;
 		}
 	} else
 		portal_reply_page($redirurl, "error", $errormsg);
-
 } else if ($_POST['accept'] && $clientip && $cpcfg['auth_method'] == "none") {
 	captiveportal_logportalauth("unauthenticated",$clientmac,$clientip,"ACCEPT");
 	portal_allow($clientip, $clientmac, "unauthenticated");
-
 } else if ($cpcfg['auth_method'] == "oauth2") {
         require_once('OAuth/backends/google.php');
         $result = authenticate($cpcfg['oauth2']['client_id'], $cpcfg['oauth2']['client_secret']);
+        if ($result) {
+          $redirurl = $_COOKIE['redirurl'];
+          portal_allow($clientip, $clientmac, $result);
+        }
+}else if ($cpcfg['auth_method'] == "oauth2fb") {
+        require_once('OAuth/backends/facebook.php');
+        $result = authenticate($cpcfg['oauth2fb']['client_id'], $cpcfg['oauth2fb']['client_secret']);
         if ($result) {
           $redirurl = $_COOKIE['redirurl'];
           portal_allow($clientip, $clientmac, $result);
@@ -239,7 +214,5 @@ EOD;
 	/* display captive portal page */
 	portal_reply_page($redirurl, "login",null,$clientmac,$clientip);
 }
-
 ob_flush();
-
 ?>
