@@ -2,20 +2,15 @@
 /*
 	services_captiveportal.php
 	part of m0n0wall (http://m0n0.ch/wall)
-
 	Copyright (C) 2003-2006 Manuel Kasper <mk@neon1.net>.
 	All rights reserved.
-
 	Redistribution and use in source and binary forms, with or without
 	modification, are permitted provided that the following conditions are met:
-
 	1. Redistributions of source code must retain the above copyright notice,
 	   this list of conditions and the following disclaimer.
-
 	2. Redistributions in binary form must reproduce the above copyright
 	   notice, this list of conditions and the following disclaimer in the
 	   documentation and/or other materials provided with the distribution.
-
 	THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
 	INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
 	AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
@@ -30,36 +25,29 @@
 /*
 	pfSense_MODULE:	captiveportal
 */
-
 ##|+PRIV
 ##|*IDENT=page-services-captiveportal
 ##|*NAME=Services: Captive portal page
 ##|*DESCR=Allow access to the 'Services: Captive portal' page.
 ##|*MATCH=services_captiveportal.php*
 ##|-PRIV
-
 require_once("guiconfig.inc");
 require_once("functions.inc");
 require_once("filter.inc");
 require_once("shaper.inc");
 require_once("captiveportal.inc");
-
 $cpzone = $_GET['zone'];
 if (isset($_POST['zone']))
 	$cpzone = $_POST['zone'];
-
 if (empty($cpzone) || empty($config['captiveportal'][$cpzone])) {
 	header("Location: services_captiveportal_zones.php");
 	exit;
 }
-
 if (!is_array($config['captiveportal']))
 	$config['captiveportal'] = array();
 $a_cp =& $config['captiveportal'];
-
 $pgtitle = array(gettext("Services"),gettext("Captive portal"), $a_cp[$cpzone]['zone']);
 $shortcut_section = "captiveportal";
-
 if ($_GET['act'] == "viewhtml") {
 	if ($a_cp[$cpzone] && $a_cp[$cpzone]['page']['htmltext'])
 		echo base64_decode($a_cp[$cpzone]['page']['htmltext']);
@@ -73,17 +61,12 @@ if ($_GET['act'] == "viewhtml") {
 		echo base64_decode($a_cp[$cpzone]['page']['logouttext']);
 	exit;
 }
-
 if (!is_array($config['ca']))
 	$config['ca'] = array();
-
 $a_ca =& $config['ca'];
-
 if (!is_array($config['cert']))
 	$config['cert'] = array();
-
 $a_cert =& $config['cert'];
-
 if ($a_cp[$cpzone]) {
 	$pconfig['zoneid'] = $a_cp[$cpzone]['zoneid'];
 	$pconfig['cinterface'] = $a_cp[$cpzone]['interface'];
@@ -97,6 +80,7 @@ if ($a_cp[$cpzone]) {
 	$pconfig['enable'] = isset($a_cp[$cpzone]['enable']);
 	$pconfig['auth_method'] = $a_cp[$cpzone]['auth_method'];
         $pconfig['oauth2'] = $a_cp[$cpzone]['oauth2'];
+	$pconfig['oauth2fb'] = $a_cp[$cpzone]['oauth2fb'];
 	$pconfig['localauth_priv'] = isset($a_cp[$cpzone]['localauth_priv']);
 	$pconfig['radacct_enable'] = isset($a_cp[$cpzone]['radacct_enable']);
 	$pconfig['radmac_enable'] = isset($a_cp[$cpzone]['radmac_enable']);
@@ -144,19 +128,14 @@ if ($a_cp[$cpzone]) {
 	if ($a_cp[$cpzone]['page']['logouttext'])
 		$pconfig['page']['logouttext'] = $a_cp[$cpzone]['page']['logouttext'];
 }
-
 if ($_POST) {
-
 	unset($input_errors);
 	$pconfig = $_POST;
-
 	/* input validation */
 	if ($_POST['enable']) {
 		$reqdfields = explode(" ", "zone cinterface");
 		$reqdfieldsn = array(gettext("Zone name"), gettext("Interface"));
-
 		do_input_validation($_POST, $reqdfields, $reqdfieldsn, &$input_errors);
-
 		/* make sure no interfaces are bridged or used on other zones */
 		if (is_array($_POST['cinterface'])) {
 			foreach ($pconfig['cinterface'] as $cpbrif) {
@@ -170,7 +149,6 @@ if ($_POST) {
 				}
 			}
 		}
-
 		if ($_POST['httpslogin_enable']) {
 			if (!$_POST['certref']) {
 				$input_errors[] = gettext("Certificate must be specified for HTTPS login.");
@@ -180,7 +158,6 @@ if ($_POST) {
 			}
 		}
 	}
-
 	if ($_POST['timeout']) {
 		if (!is_numeric($_POST['timeout']) || ($_POST['timeout'] < 1))
 			$input_errors[] = gettext("The timeout must be at least 1 minute.");
@@ -190,11 +167,9 @@ if ($_POST) {
 					continue;
 				if (!is_array($_POST['cinterface']) || !in_array($dhcpd_if, $_POST['cinterface']))
 					continue;
-
 				$deftime = 7200; // Default lease time
 				if (isset($dhcpd_data['defaultleasetime']) && is_numeric($dhcpd_data['defaultleasetime']))
 					$deftime = $dhcpd_data['defaultleasetime'];
-
 				if ($_POST['timeout'] > $deftime)
 					$input_errors[] = gettext("Hard timeout must be less or equal Default lease time set on DHCP Server");
 			}
@@ -243,7 +218,6 @@ if ($_POST) {
 	if (trim($_POST['radiusnasid']) !== "" && !preg_match("/^[\x21-\x7e]{3,253}$/i", trim($_POST['radiusnasid']))) {
 		$input_errors[] = gettext("The NAS-Identifier must be 3-253 characters long and should only contain ASCII characters.");
 	}
-
 	if (!$input_errors) {
 		$newcp =& $a_cp[$cpzone];
 		//$newcp['zoneid'] = $a_cp[$cpzone]['zoneid'];
@@ -270,6 +244,9 @@ if ($_POST) {
 		$newcp['auth_method'] = $_POST['auth_method'];
                 if ($newcp['auth_method'] == 'oauth2') {
                   $newcp['oauth2'] = array('client_secret' => $_POST['oauth2_secret'],
+                                           'client_id' => $_POST['oauth2_id']);
+                }else if ($newcp['auth_method'] == 'oauth2fb') {
+                  $newcp['oauth2fb'] = array('client_secret' => $_POST['oauth2_secret'],
                                            'client_id' => $_POST['oauth2_id']);
                 }
 		$newcp['localauth_priv'] = isset($_POST['localauth_priv']);
@@ -330,7 +307,6 @@ if ($_POST) {
 		$newcp['radiusnasid'] = trim($_POST['radiusnasid']);
 		if (!is_array($newcp['page']))
 			$newcp['page'] = array();
-
 		/* file upload? */
 		if (is_uploaded_file($_FILES['htmlfile']['tmp_name']))
 			$newcp['page']['htmltext'] = base64_encode(file_get_contents($_FILES['htmlfile']['tmp_name']));
@@ -338,9 +314,7 @@ if ($_POST) {
 			$newcp['page']['errtext'] = base64_encode(file_get_contents($_FILES['errfile']['tmp_name']));
 		if (is_uploaded_file($_FILES['logoutfile']['tmp_name']))
 			$newcp['page']['logouttext'] = base64_encode(file_get_contents($_FILES['logoutfile']['tmp_name']));
-
 		write_config();
-
 		/* Clear up unselected interfaces */
 		$newifaces = explode(",", $newcp['interface']);
 		$toremove = array_diff($oldifaces, $newifaces);
@@ -370,7 +344,6 @@ function enable_change(enable_change) {
 	localauth_endis = !((!endis && document.iform.auth_method[1].checked) || enable_change);
 	radius_endis = !((!endis && document.iform.auth_method[2].checked) || enable_change);
 	https_endis = !((!endis && document.iform.httpslogin_enable.checked) || enable_change);
-
 	document.iform.cinterface.disabled = endis;
 	//document.iform.maxproc.disabled = endis;
 	document.iform.maxprocperip.disabled = endis;
@@ -420,11 +393,8 @@ function enable_change(enable_change) {
 	document.iform.htmlfile.disabled = endis;
 	document.iform.errfile.disabled = endis;
 	document.iform.logoutfile.disabled = endis;
-
 	document.iform.radiusacctport.disabled = (radius_endis || !document.iform.radacct_enable.checked) && !enable_change;
-
 	document.iform.radmac_secret.disabled = (radius_endis || !document.iform.radmac_enable.checked) && !enable_change;
-
 	var radacct_dis = (radius_endis || !document.iform.radacct_enable.checked) && !enable_change;
 	document.iform.reauthenticateacct[0].disabled = radacct_dis;
 	document.iform.reauthenticateacct[1].disabled = radacct_dis;
@@ -623,6 +593,34 @@ function enable_change(enable_change) {
                         <td>Secret</td>
                         <td>
                           <input type='text' name='oauth2_secret' class='formfld unknown' size=30 value='<?php if($pconfig['auth_method']=="oauth2") echo $pconfig['oauth2']['client_secret'] ?>' />
+                      </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+ <tr>
+                  <td colspan="2">
+                    <input name="auth_method" type="radio" id="auth_method" value="oauth2fb" <?php if($pconfig['auth_method']=="oauth2fb") echo "checked"; ?>/>OAuth2(via Facebook)
+                  </td>
+                </tr>
+                <tr>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                </tr>
+                <tr>
+                  <td>&nbsp;</td>
+                  <td>
+                    <table>
+                      <tr>
+                        <td>ID</td>
+                        <td>
+                          <input type='text' name='oauth2_id' class='formfld unknown' size=30 value='<?php if($pconfig['auth_method']=="oauth2fb") echo $pconfig['oauth2fb']['client_id'] ?>' />
+                      </td>
+                      </tr>
+                      <tr>
+                        <td>Secret</td>
+                        <td>
+                          <input type='text' name='oauth2_secret' class='formfld unknown' size=30 value='<?php if($pconfig['auth_method']=="oauth2fb") echo $pconfig['oauth2fb']['client_secret'] ?>' />
                       </td>
                       </tr>
                     </table>
@@ -829,7 +827,6 @@ function enable_change(enable_change) {
 								$start = ip2long32(gen_subnet($sn['subnet'], $sn['subnet_bits']));
 								$end = ip2long32(gen_subnet_max($sn['subnet'], $sn['subnet_bits']));
 								$len = $end - $start;
-
 								for ($i = 0; $i <= $len; $i++) {
 									$snip = long2ip32($start+$i);
 									echo "<option value='{$snip}' {$selected}>" . htmlspecialchars("{$sn['descr']} - {$snip}") . "></option>\n";
