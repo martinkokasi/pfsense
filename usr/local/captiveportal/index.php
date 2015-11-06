@@ -203,9 +203,16 @@ EOD;
           $redirurl = $_COOKIE['redirurl'];
           portal_allow($clientip, $clientmac, $result);
         }
-}else if ($cpcfg['auth_method'] == "oauth2fb") {
+} else if ($cpcfg['auth_method'] == "oauth2fb") {
         require_once('OAuth/backends/facebook.php');
         $result = authenticate($cpcfg['oauth2fb']['client_id'], $cpcfg['oauth2fb']['client_secret']);
+        if ($result) {
+          $redirurl = $_COOKIE['redirurl'];
+          portal_allow($clientip, $clientmac, $result);
+        }
+} else if ($cpcfg['auth_method'] == "oauth2twr") {
+        require_once('OAuth/backends/twitter.php');
+        $result = authenticate($cpcfg['oauth2twr']['client_id'], $cpcfg['oauthtwr']['client_secret']);
         if ($result) {
           $redirurl = $_COOKIE['redirurl'];
           portal_allow($clientip, $clientmac, $result);
