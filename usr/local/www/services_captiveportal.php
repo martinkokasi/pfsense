@@ -81,6 +81,7 @@ if ($a_cp[$cpzone]) {
 	$pconfig['auth_method'] = $a_cp[$cpzone]['auth_method'];
         $pconfig['oauth2'] = $a_cp[$cpzone]['oauth2'];
 	$pconfig['oauth2fb'] = $a_cp[$cpzone]['oauth2fb'];
+	$pconfig['oauth2twr'] = $a_cp[$cpzone]['oauth2twr'];
 	$pconfig['localauth_priv'] = isset($a_cp[$cpzone]['localauth_priv']);
 	$pconfig['radacct_enable'] = isset($a_cp[$cpzone]['radacct_enable']);
 	$pconfig['radmac_enable'] = isset($a_cp[$cpzone]['radmac_enable']);
@@ -245,8 +246,11 @@ if ($_POST) {
                 if ($newcp['auth_method'] == 'oauth2') {
                   $newcp['oauth2'] = array('client_secret' => $_POST['oauth2_secret'],
                                            'client_id' => $_POST['oauth2_id']);
-                }else if ($newcp['auth_method'] == 'oauth2fb') {
+                } else if ($newcp['auth_method'] == 'oauth2fb') {
                   $newcp['oauth2fb'] = array('client_secret' => $_POST['oauth2_secret'],
+                                           'client_id' => $_POST['oauth2_id']);
+                } else if ($newcp['auth_method'] == 'oauth2twr') {
+                  $newcp['oauth2twr'] = array('client_secret' => $_POST['oauth2_secret'],
                                            'client_id' => $_POST['oauth2_id']);
                 }
 		$newcp['localauth_priv'] = isset($_POST['localauth_priv']);
@@ -626,6 +630,36 @@ function enable_change(enable_change) {
                     </table>
                   </td>
                 </tr>
+
+ <tr>
+                  <td colspan="2">
+                    <input name="auth_method" type="radio" id="auth_method" value="oauth2twr" <?php if($pconfig['auth_method']=="oauth2twr") echo "checked"; ?>/>OAuth2(via Twitter)
+                  </td>
+                </tr>
+                <tr>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                </tr>
+                <tr>
+                  <td>&nbsp;</td>
+                  <td>
+                    <table>
+                      <tr>
+                        <td>ID</td>
+                        <td>
+                          <input type='text' name='oauth2_id' class='formfld unknown' size=30 value='<?php if($pconfig['auth_method']=="oauth2twr") echo $pconfig['oauth2twr']['client_id'] ?>' />
+                      </td>
+                      </tr>
+                      <tr>
+                        <td>Secret</td>
+                        <td>
+                          <input type='text' name='oauth2_secret' class='formfld unknown' size=30 value='<?php if($pconfig['auth_method']=="oauth2twr") echo $pconfig['oauth2twr']['client_secret'] ?>' />
+                      </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
 		<tr>
 		  <td colspan="2"><input name="auth_method" type="radio" id="auth_method" value="local" onClick="enable_change(false)" <?php if($pconfig['auth_method']=="local") echo "checked"; ?>>
   <?=gettext("Local"); ?> <a href="system_usermanager.php"><?=gettext("User Manager"); ?></a> / <?=gettext("Vouchers"); ?></td>
